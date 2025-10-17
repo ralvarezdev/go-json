@@ -44,6 +44,11 @@ func (d Decoder) Decode(
 	body interface{},
 	dest interface{},
 ) error {
+	// Check the body
+	if body == nil {
+		return gojsondecoder.ErrNilBody
+	}
+
 	// Check the body type
 	reader, err := gojsondecoder.ToReader(body)
 	if err != nil {
@@ -66,6 +71,16 @@ func (d Decoder) DecodeReader(
 	reader io.Reader,
 	dest interface{},
 ) error {
+	// Check the reader
+	if reader == nil {
+		return gojsondecoder.ErrNilReader
+	}
+
+	// Check the decoder destination
+	if dest == nil {
+		return gojsondecoder.ErrNilDestination
+	}
+
 	return UnmarshalByReflection(
 		reader,
 		dest,

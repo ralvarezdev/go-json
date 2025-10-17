@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+
+	gojsonencoder "github.com/ralvarezdev/go-json/encoder"
 )
 
 type (
@@ -34,6 +36,11 @@ func NewStreamEncoder() *StreamEncoder {
 func (s StreamEncoder) Encode(
 	body interface{},
 ) ([]byte, error) {
+	// Check if body is nil
+	if body == nil {
+		return nil, gojsonencoder.ErrNilBody
+	}
+
 	// Create a buffer to write to
 	buffer := new(bytes.Buffer)
 
@@ -69,6 +76,11 @@ func (s StreamEncoder) EncodeAndWrite(
 	beforeWriteFn func() error,
 	body interface{},
 ) (err error) {
+	// Check if the writer is nil
+	if writer == nil {
+		return gojsonencoder.ErrNilWriter
+	}
+
 	// Call the before write function if provided
 	if beforeWriteFn != nil {
 		if err = beforeWriteFn(); err != nil {

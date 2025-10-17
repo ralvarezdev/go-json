@@ -3,6 +3,8 @@ package json
 import (
 	"encoding/json"
 	"io"
+
+	gojsonencoder "github.com/ralvarezdev/go-json/encoder"
 )
 
 type (
@@ -32,6 +34,12 @@ func NewEncoder() *Encoder {
 func (e Encoder) Encode(
 	body interface{},
 ) ([]byte, error) {
+	// Check if body is nil
+	if body == nil {
+		return nil, gojsonencoder.ErrNilBody
+	}
+
+	// Marshal the body into JSON
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -55,6 +63,11 @@ func (e Encoder) EncodeAndWrite(
 	beforeWriteFn func() error,
 	body interface{},
 ) error {
+	// Check if the writer is nil
+	if writer == nil {
+		return gojsonencoder.ErrNilWriter
+	}
+
 	// Encode the body into JSON
 	jsonBody, err := e.Encode(body)
 	if err != nil {

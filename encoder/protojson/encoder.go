@@ -4,6 +4,7 @@ import (
 	"io"
 	"reflect"
 
+	gojsonencoder "github.com/ralvarezdev/go-json/encoder"
 	gojsonencoderjson "github.com/ralvarezdev/go-json/encoder/json"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -74,6 +75,11 @@ func (e Encoder) PrecomputeMarshal(
 func (e Encoder) Encode(
 	body interface{},
 ) ([]byte, error) {
+	// Check if body is nil
+	if body == nil {
+		return nil, gojsonencoder.ErrNilBody
+	}
+
 	// Marshal the instance to get the precomputed body
 	precomputedMarshal, err := e.PrecomputeMarshal(body)
 	if err != nil {
@@ -98,6 +104,11 @@ func (e Encoder) EncodeAndWrite(
 	beforeWriteFn func() error,
 	body interface{},
 ) error {
+	// Check if the writer is nil
+	if writer == nil {
+		return gojsonencoder.ErrNilWriter
+	}
+
 	// Marshal the instance to get the precomputed body
 	precomputedMarshal, err := e.PrecomputeMarshal(body)
 	if err != nil {
