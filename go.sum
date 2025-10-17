@@ -1,0 +1,6 @@
+github.com/ralvarezdev/go-reflect v0.2.11 h1:WqwL1MHVH4VWTj6RahZc+v47kjJOwya0+A+JYFrqB6c=
+github.com/ralvarezdev/go-reflect v0.2.11/go.mod h1:HFctB1EEZdN5+T9luOalTmdRfIQ9SwQd4LtxXDGicbE=
+github.com/ralvarezdev/go-strings v0.1.16 h1:0yc7yamYEWVrFTK3C95IjSE5IqCs3H1alIIVEmzIolY=
+github.com/ralvarezdev/go-strings v0.1.16/go.mod h1:8sFOqmPJpqzS7bTjf91EzUCITnwpmkfifwY80GxV5r8=
+google.golang.org/protobuf v1.36.10 h1:AYd7cD/uASjIL6Q9LiTjz8JLcrh/88q5UObnmY3aOOE=
+google.golang.org/protobuf v1.36.10/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
