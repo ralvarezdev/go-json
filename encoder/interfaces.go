@@ -19,6 +19,7 @@ type (
 
 	// ProtoJSONEncoder interface
 	ProtoJSONEncoder interface {
+		Encoder
 		PrecomputeMarshal(
 			body interface{},
 		) (map[string]interface{}, error)
