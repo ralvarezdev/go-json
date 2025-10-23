@@ -8,7 +8,63 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// PrecomputeMarshalByReflection marshals a struct to a map[string]interface{} using reflection, handling nested proto.Message fields appropriately
+// processField processes a single struct field for marshaling
+//
+// Parameters:
+//
+//   - field: The reflect.Value of the field
+//   - fieldType: The reflect.StructField of the field
+//   - marshalOptions: The protojson.MarshalOptions to use
+//   - result: The map to store the processed field
+//
+// Returns:
+//
+// - error: The error if any
+func processField(
+	field reflect.Value,
+	fieldType *reflect.StructField,
+	marshalOptions *protojson.MarshalOptions,
+	result map[string]any,
+) error {
+	// Check if fieldType is nil
+	if fieldType == nil {
+		return nil
+	}
+
+	// Get the field value
+	val := field.Interface()
+
+	// Handle proto.Message fields
+	switch fv := val.(type) {
+	case proto.Message:
+		// Marshal proto.Message to JSON
+		data, err := marshalOptions.Marshal(fv)
+		if err != nil {
+			return err
+		}
+
+		// Store as json.RawMessage to avoid double encoding
+		result[fieldType.Name] = json.RawMessage(data)
+	default:
+		// Recursively handle nested structs
+		if field.Kind() == reflect.Struct {
+			nested, err := PrecomputeMarshalByReflection(
+				field,
+				marshalOptions,
+			)
+			if err != nil {
+				return err
+			}
+			result[fieldType.Name] = nested
+		} else {
+			result[fieldType.Name] = val
+		}
+	}
+	return nil
+}
+
+// PrecomputeMarshalByReflection marshals a struct to a map[string]any using reflection, handling nested
+// proto.Message fields appropriately
 //
 // Parameters:
 //
@@ -17,12 +73,12 @@ import (
 //
 // Returns:
 //
-//   - map[string]interface{}: The marshaled struct as a map
+//   - map[string]any: The marshaled struct as a map
 //   - error: The error if any
 func PrecomputeMarshalByReflection(
 	v reflect.Value,
 	marshalOptions *protojson.MarshalOptions,
-) (map[string]interface{}, error) {
+) (map[string]any, error) {
 	// Ensure marshalOptions is not nil
 	if marshalOptions == nil {
 		marshalOptions = &protojson.MarshalOptions{}
@@ -34,7 +90,7 @@ func PrecomputeMarshalByReflection(
 	}
 
 	// Prepare result map
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 	t := v.Type()
 
 	// Handle nested proto.Message fields
@@ -43,35 +99,18 @@ func PrecomputeMarshalByReflection(
 		fieldType := t.Field(i)
 
 		// Check if the field can be interfaced
-		if field.CanInterface() {
-			val := field.Interface()
+		if !field.CanInterface() {
+			continue
+		}
 
-			// Handle proto.Message fields
-			switch fv := val.(type) {
-			case proto.Message:
-				// Marshal proto.Message to JSON
-				data, err := marshalOptions.Marshal(fv)
-				if err != nil {
-					return nil, err
-				}
-
-				// Store as json.RawMessage to avoid double encoding
-				result[fieldType.Name] = json.RawMessage(data)
-			default:
-				// Recursively handle nested structs
-				if field.Kind() == reflect.Struct {
-					nested, err := PrecomputeMarshalByReflection(
-						field,
-						marshalOptions,
-					)
-					if err != nil {
-						return nil, err
-					}
-					result[fieldType.Name] = nested
-				} else {
-					result[fieldType.Name] = val
-				}
-			}
+		// Process the field
+		if err := processField(
+			field,
+			&fieldType,
+			marshalOptions,
+			result,
+		); err != nil {
+			return nil, err
 		}
 	}
 	return result, nil

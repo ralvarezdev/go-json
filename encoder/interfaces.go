@@ -8,12 +8,12 @@ type (
 	// Encoder interface
 	Encoder interface {
 		Encode(
-			body interface{},
+			body any,
 		) ([]byte, error)
 		EncodeAndWrite(
 			writer io.Writer,
 			beforeWriteFn func() error,
-			body interface{},
+			body any,
 		) error
 	}
 
@@ -21,7 +21,7 @@ type (
 	ProtoJSONEncoder interface {
 		Encoder
 		PrecomputeMarshal(
-			body interface{},
-		) (map[string]interface{}, error)
+			body any,
+		) (map[string]any, error)
 	}
 )

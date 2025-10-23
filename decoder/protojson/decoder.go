@@ -3,8 +3,9 @@ package protojson
 import (
 	"io"
 
-	gojsondecoder "github.com/ralvarezdev/go-json/decoder"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	gojsondecoder "github.com/ralvarezdev/go-json/decoder"
 )
 
 type (
@@ -41,8 +42,8 @@ func NewDecoder() *Decoder {
 //
 //   - error: The error if any
 func (d Decoder) Decode(
-	body interface{},
-	dest interface{},
+	body any,
+	dest any,
 ) error {
 	// Check the body
 	if body == nil {
@@ -69,7 +70,7 @@ func (d Decoder) Decode(
 //   - error: The error if any
 func (d Decoder) DecodeReader(
 	reader io.Reader,
-	dest interface{},
+	dest any,
 ) error {
 	// Check the reader
 	if reader == nil {

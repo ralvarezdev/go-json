@@ -32,8 +32,8 @@ func NewStreamDecoder() *StreamDecoder {
 //
 //   - error: The error if any
 func (s StreamDecoder) Decode(
-	body interface{},
-	dest interface{},
+	body any,
+	dest any,
 ) error {
 	// Check the body
 	if body == nil {
@@ -60,7 +60,7 @@ func (s StreamDecoder) Decode(
 //   - error: The error if any
 func (s StreamDecoder) DecodeReader(
 	reader io.Reader,
-	dest interface{},
+	dest any,
 ) error {
 	// Check the reader
 	if reader == nil {

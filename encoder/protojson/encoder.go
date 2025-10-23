@@ -4,9 +4,10 @@ import (
 	"io"
 	"reflect"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	gojsonencoder "github.com/ralvarezdev/go-json/encoder"
 	gojsonencoderjson "github.com/ralvarezdev/go-json/encoder/json"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type (
@@ -45,10 +46,10 @@ func NewEncoder() *Encoder {
 //
 // Returns:
 //
-// - (map[string]interface{}, error): The precomputed marshaled body and the error if any
+// - (map[string]any, error): The precomputed marshaled body and the error if any
 func (e Encoder) PrecomputeMarshal(
-	body interface{},
-) (map[string]interface{}, error) {
+	body any,
+) (map[string]any, error) {
 	// Reflect on the instance to get its fields
 	v := reflect.ValueOf(body)
 
@@ -73,7 +74,7 @@ func (e Encoder) PrecomputeMarshal(
 //
 //   - ([]byte, error): The encoded body and the error if any
 func (e Encoder) Encode(
-	body interface{},
+	body any,
 ) ([]byte, error) {
 	// Check if body is nil
 	if body == nil {
@@ -102,7 +103,7 @@ func (e Encoder) Encode(
 func (e Encoder) EncodeAndWrite(
 	writer io.Writer,
 	beforeWriteFn func() error,
-	body interface{},
+	body any,
 ) error {
 	// Check if the writer is nil
 	if writer == nil {

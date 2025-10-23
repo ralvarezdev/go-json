@@ -22,8 +22,8 @@ import (
 //
 // - error: The error if any
 func decodeNestedProtoMessages(
-	body map[string]interface{},
-	dest interface{},
+	body map[string]any,
+	dest any,
 	unmarshalOptions *protojson.UnmarshalOptions,
 ) error {
 	// Validate unmarshal options
@@ -66,11 +66,11 @@ func decodeNestedProtoMessages(
 			}
 
 			// Unmarshal the JSON into the proto.Message field
-			if err = unmarshalOptions.Unmarshal(
+			if unmarshalErr := unmarshalOptions.Unmarshal(
 				marshaledField,
 				protoField,
-			); err != nil {
-				return err
+			); unmarshalErr != nil {
+				return unmarshalErr
 			}
 		}
 
@@ -89,11 +89,11 @@ func decodeNestedProtoMessages(
 			}
 
 			// Unmarshal the JSON into the struct field
-			if err = json.Unmarshal(
+			if unmarshalErr := json.Unmarshal(
 				marshaledField,
 				field.Interface(),
-			); err != nil {
-				return err
+			); unmarshalErr != nil {
+				return unmarshalErr
 			}
 			continue
 		}
@@ -111,26 +111,23 @@ func decodeNestedProtoMessages(
 		}
 
 		// Initialize the map to hold nested body
-		var nestedBody map[string]interface{}
-		if err = json.Unmarshal(marshaledField, &nestedBody); err != nil {
-			return err
+		var nestedBody map[string]any
+		if unmarshalErr := json.Unmarshal(marshaledField, &nestedBody); unmarshalErr != nil {
+			return unmarshalErr
 		}
 
 		// Decode the nested body
-		if err = decodeNestedProtoMessages(
+		if decodeErr := decodeNestedProtoMessages(
 			nestedBody,
 			field.Addr().Interface(),
 			unmarshalOptions,
-		); err != nil {
-			return err
+		); decodeErr != nil {
+			return decodeErr
 		}
 	}
 
 	// Map the body to the struct field
-	if err := goreflect.MapToStruct(body, dest); err != nil {
-		return err
-	}
-	return nil
+	return goreflect.MapToStruct(body, dest)
 }
 
 // UnmarshalByReflection decodes JSON from io.Reader into a destination, handling nested proto.Message fields.
@@ -146,7 +143,7 @@ func decodeNestedProtoMessages(
 //   - error: The error if any
 func UnmarshalByReflection(
 	reader io.Reader,
-	dest interface{},
+	dest any,
 	unmarshalOptions *protojson.UnmarshalOptions,
 ) error {
 	// Validate unmarshal options
@@ -168,9 +165,9 @@ func UnmarshalByReflection(
 	}
 
 	// Initialize the map to hold intermediate JSON data
-	var body map[string]interface{}
-	if err = json.Unmarshal(data, &body); err != nil {
-		return err
+	var body map[string]any
+	if unmarshalErr := json.Unmarshal(data, &body); unmarshalErr != nil {
+		return unmarshalErr
 	}
 
 	return decodeNestedProtoMessages(body, dest, unmarshalOptions)

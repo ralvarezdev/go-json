@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-// ToReader converts an interface{} to an io.Reader
+// ToReader converts an any to an io.Reader
 //
 // Parameters:
 //
-//   - any: The interface{} to convert (can be io.Reader, string, or []byte)
+//   - reader: The any to convert
 //
 // Returns:
 //
 // - io.Reader: The converted io.Reader
 // - error: Error if the conversion fails
-func ToReader(any interface{}) (io.Reader, error) {
-	switch v := any.(type) {
+func ToReader(reader any) (io.Reader, error) {
+	switch v := reader.(type) {
 	case io.Reader:
 		return v, nil
 	case string:

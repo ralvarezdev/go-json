@@ -32,7 +32,7 @@ func NewEncoder() *Encoder {
 //   - []byte: The encoded JSON bytes
 //   - error: The error if any
 func (e Encoder) Encode(
-	body interface{},
+	body any,
 ) ([]byte, error) {
 	// Check if body is nil
 	if body == nil {
@@ -61,7 +61,7 @@ func (e Encoder) Encode(
 func (e Encoder) EncodeAndWrite(
 	writer io.Writer,
 	beforeWriteFn func() error,
-	body interface{},
+	body any,
 ) error {
 	// Check if the writer is nil
 	if writer == nil {
@@ -76,12 +76,12 @@ func (e Encoder) EncodeAndWrite(
 
 	// Call the before write function if provided
 	if beforeWriteFn != nil {
-		if err = beforeWriteFn(); err != nil {
-			return err
+		if fnErr := beforeWriteFn(); fnErr != nil {
+			return fnErr
 		}
 	}
 
 	// Write the JSON body to the writer
-	_, err = writer.Write(jsonBody)
-	return err
+	_, writeErr := writer.Write(jsonBody)
+	return writeErr
 }

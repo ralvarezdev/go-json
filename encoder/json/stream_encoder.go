@@ -34,7 +34,7 @@ func NewStreamEncoder() *StreamEncoder {
 //   - ([]byte): The encoded JSON
 //   - error: The error if any
 func (s StreamEncoder) Encode(
-	body interface{},
+	body any,
 ) ([]byte, error) {
 	// Check if body is nil
 	if body == nil {
@@ -74,7 +74,7 @@ func (s StreamEncoder) Encode(
 func (s StreamEncoder) EncodeAndWrite(
 	writer io.Writer,
 	beforeWriteFn func() error,
-	body interface{},
+	body any,
 ) (err error) {
 	// Check if the writer is nil
 	if writer == nil {
@@ -83,15 +83,11 @@ func (s StreamEncoder) EncodeAndWrite(
 
 	// Call the before write function if provided
 	if beforeWriteFn != nil {
-		if err = beforeWriteFn(); err != nil {
-			return err
+		if fnErr := beforeWriteFn(); fnErr != nil {
+			return fnErr
 		}
 	}
 
 	// Encode the body into JSON
-	if err = json.NewEncoder(writer).Encode(body); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewEncoder(writer).Encode(body)
 }
