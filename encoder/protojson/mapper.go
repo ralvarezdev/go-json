@@ -15,6 +15,7 @@ type (
 	// Mapper is the protoJSON mapper struct
 	Mapper struct {
 		reflectType        reflect.Type
+		optionalFields     map[string]struct{}
 		protoMessageFields map[string]struct{}
 		regularFields      map[string]struct{}
 		jsonFieldNames     map[string]string
@@ -43,6 +44,7 @@ func NewMapper(structInstance any) (*Mapper, error) {
 	reflectedValue := goreflect.GetDereferencedValue(structInstance)
 
 	// Prepare the different maps
+	optionalFields := make(map[string]struct{})
 	protoMessageFields := make(map[string]struct{})
 	regularFields := make(map[string]struct{})
 	jsonFieldNames := make(map[string]string)
@@ -71,6 +73,11 @@ func NewMapper(structInstance any) (*Mapper, error) {
 		jsonFieldName, err := gostringsjson.GetJSONTagName(jsonTag, fieldName)
 		if err != nil {
 			return nil, err
+		}
+		
+		// Check if the field is optional
+		if gostringsjson.IsJSONFieldOptional(jsonTag){
+			optionalFields[fieldName] = struct{}{}
 		}
 
 		// Store the JSON field name
@@ -101,6 +108,7 @@ func NewMapper(structInstance any) (*Mapper, error) {
 	}
 	return &Mapper{
 		reflectType:        reflectedType,
+		optionalFields:     optionalFields,
 		protoMessageFields: protoMessageFields,
 		regularFields:      regularFields,
 		jsonFieldNames:     jsonFieldNames,
@@ -161,6 +169,14 @@ func (m *Mapper) PrecomputeMarshalByReflection(
 
 		// Get the field value
 		fieldValueInterface := fieldValue.Interface()
+		
+		// Check if the field is optional and is nil
+		if _, optionalOk := m.optionalFields[fieldName]; optionalOk {
+			if fieldValue.IsNil() {
+				// Skip nil optional fields
+				continue
+			}
+		}
 
 		// Check if the field is a regular field
 		if _, regularOk := m.regularFields[fieldName]; regularOk {
