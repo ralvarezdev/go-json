@@ -11,15 +11,50 @@ import (
 type (
 	Decoder struct {
 		unmarshalOptions protojson.UnmarshalOptions
+		cache bool
+		cachedMappers map[string]*Mapper
+	}
+	
+	// Options are the additional settings for the decoder implementation
+	Options struct {
+		// cache indicates whether to cache the precompute unmarshal by reflection functions
+		cache bool
 	}
 )
 
+// NewOptions creates a new Options instance
+// 
+// Parameters:
+// 
+//  - cache: indicates whether to cache the precompute unmarshal by reflection functions
+// 
+// Returns:
+// 
+// - *Options: the new Options instance
+func NewOptions(
+	cache bool,
+) *Options {
+	return &Options{
+		cache: cache,
+	}
+}
+
 // NewDecoder creates a new Decoder instance
+// 
+// Parameters:
+// 
+//  - options: the additional settings for the decoder implementation
 //
 // Returns:
 //
 //   - *Decoder: The decoder instance
-func NewDecoder() *Decoder {
+func NewDecoder(options *Options) *Decoder {
+	// Initialize cache setting
+	cache := false
+	if options != nil {
+		cache = options.cache
+	}
+	
 	// Initialize unmarshal options
 	unmarshalOptions := protojson.UnmarshalOptions{
 		DiscardUnknown: true,
@@ -28,6 +63,7 @@ func NewDecoder() *Decoder {
 
 	return &Decoder{
 		unmarshalOptions: unmarshalOptions,
+		cache:            cache,
 	}
 }
 
@@ -55,6 +91,7 @@ func (d Decoder) Decode(
 	if err != nil {
 		return err
 	}
+	
 	return d.DecodeReader(reader, dest)
 }
 
@@ -81,9 +118,15 @@ func (d Decoder) DecodeReader(
 	if dest == nil {
 		return gojsondecoder.ErrNilDestination
 	}
+	
+	// Read all data from the reader
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
 
 	return UnmarshalByReflection(
-		reader,
+		data,
 		dest,
 		&d.unmarshalOptions,
 	)

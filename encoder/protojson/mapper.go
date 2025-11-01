@@ -14,6 +14,7 @@ import (
 type (	
 	// Mapper is the protoJSON mapper struct
 	Mapper struct {
+		reflectType 			reflect.Type
 		protoMessageFields        map[string]struct{}
 		regularFields             map[string]struct{}
 		jsonFieldNames           map[string]string
@@ -38,9 +39,8 @@ func NewMapper(structInstance any) (*Mapper, error) {
 	}
 
 	// Reflection of data
-	reflection := goreflect.NewReflection(structInstance)
-	reflectedType := reflection.GetReflectedType()
-	reflectedValue := reflection.GetReflectedValue()
+	reflectedType := goreflect.GetDereferencedType(structInstance)
+	reflectedValue := goreflect.GetDereferencedValue(structInstance)
 	
 	// Prepare the different maps
 	protoMessageFields := make(map[string]struct{})
@@ -62,7 +62,7 @@ func NewMapper(structInstance any) (*Mapper, error) {
 		}
 		
 		// Get the JSON tag of the field
-		jsonTag, err := gostringsjson.GetJSONTag(structField, fieldName)
+		jsonTag, err := gostringsjson.GetJSONTag(&structField, fieldName)
 		if err != nil {
 			return nil, err
 		}
@@ -100,6 +100,7 @@ func NewMapper(structInstance any) (*Mapper, error) {
 		}
 	}
 	return &Mapper{
+		reflectType:       reflectedType,
 		protoMessageFields: protoMessageFields,
 		regularFields:      regularFields,
 		jsonFieldNames:    jsonFieldNames,
@@ -123,38 +124,48 @@ func (m *Mapper) PrecomputeMarshalByReflection(
 	body any,
 	marshalOptions *protojson.MarshalOptions,
 ) (map[string]any, error) {
-	//	return e.jsonEncoder.Encode(precomputedMarshal)/ Ensure marshalOptions is not nil
+	// Check if the mapper is nil
+	if m == nil {
+		return nil, ErrNilMapper
+	}
+	
+	// Check if body is nil
+	if body == nil {
+		return nil, ErrNilBody
+	}
+	
+	// Check if the marshal options are nil, if so create a default one
 	if marshalOptions == nil {
 		marshalOptions = &protojson.MarshalOptions{}
 	}
 
 	// Reflect on the instance to get its fields
 	reflectValue := goreflect.GetDereferencedValue(body)
-	reflectType := goreflect.GetDereferencedType(body)
 	
 	// Prepare result map
 	result := make(map[string]any)
 	
 	// Handle nested proto.Message fields
 	for i := 0; i < reflectValue.NumField(); i++ {
-		field := reflectValue.Field(i)
-		fieldType := reflectType.Field(i)
-		fieldName := fieldType.Name
+		// Get the field type through reflection
+		structField := m.reflectType.Field(i)
+		fieldValue := reflectValue.Field(i)
+		fieldName := structField.Name
 		
 		// Try to get the JSON field name
 		jsonFieldName, ok := m.jsonFieldNames[fieldName]
 		if !ok {
-			// Continue, it means the field is not mapped (unexported or ignored)
+			// If not found, skip the field, it means it cannot be interfaced
 			continue
 		}
 		
 		// Get the field value
-		fieldValue := field.Interface()
+		fieldValueInterface := fieldValue.Interface()
 		
 		// Check if the field is a regular field 
 		if _, ok := m.regularFields[fieldName]; ok {
 			// Process the field
-			result[jsonFieldName] = fieldValue
+			result[jsonFieldName] = fieldValueInterface
 			continue
 		}
 		
@@ -162,7 +173,7 @@ func (m *Mapper) PrecomputeMarshalByReflection(
 		if nestedMapper, ok := m.nestedStructs[fieldName]; ok {
 			// Recursively process the nested struct
 			nestedResult, err := nestedMapper.PrecomputeMarshalByReflection(
-				fieldValue,
+				fieldValueInterface,
 				marshalOptions,
 			)
 			if err != nil {
@@ -175,7 +186,7 @@ func (m *Mapper) PrecomputeMarshalByReflection(
 		// Check if the field is a proto.Message field
 		if _, ok := m.protoMessageFields[fieldName]; ok {
 			// Get the field value as proto.Message
-			fieldValue, ok := fieldValue.(proto.Message)
+			fieldValue, ok := fieldValueInterface.(proto.Message)
 			if !ok {
 				return nil, fmt.Errorf(ErrFieldNotProtoMessage, fieldName)
 			}
