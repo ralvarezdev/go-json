@@ -2,12 +2,12 @@ package protojson
 
 import (
 	"io"
-	"reflect"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
 	gojsonencoder "github.com/ralvarezdev/go-json/encoder"
 	gojsonencoderjson "github.com/ralvarezdev/go-json/encoder/json"
+	goreflect "github.com/ralvarezdev/go-reflect"
 )
 
 type (
@@ -15,15 +15,50 @@ type (
 	Encoder struct {
 		jsonEncoder    *gojsonencoderjson.Encoder
 		marshalOptions protojson.MarshalOptions
+		cache bool
+		cachedMappers map[string]*Mapper
+	}
+	
+	// Options are the additional settings for the encoder implementation
+	Options struct {
+		// cache indicates whether to cache the precompute marshal by reflection functions
+		cache bool
 	}
 )
 
+// NewOptions creates a new Options instance
+//
+// Parameters:
+// 
+// - cache: indicates whether to cache the precompute marshal by reflection functions
+// 
+// Returns:
+// 
+// - *Options: the new Options instance
+func NewOptions(
+	cache bool,
+) *Options {
+	return &Options{
+		cache: cache,
+	}
+}
+
 // NewEncoder creates a new Encoder instance
 //
+// Parameters:
+// 
+// - options: the additional settings for the encoder implementation
+// 
 // Returns:
 //
 // - *Encoder: the new Encoder instance
-func NewEncoder() *Encoder {
+func NewEncoder(options *Options) *Encoder {
+	// Initialize cache setting
+	cache := false
+	if options != nil {
+		cache = options.cache
+	}
+	
 	// Initialize the JSON encoder
 	jsonEncoder := gojsonencoderjson.NewEncoder()
 
@@ -35,6 +70,7 @@ func NewEncoder() *Encoder {
 	return &Encoder{
 		jsonEncoder:    jsonEncoder,
 		marshalOptions: marshalOptions,
+		cache: cache,
 	}
 }
 
@@ -50,12 +86,47 @@ func NewEncoder() *Encoder {
 func (e Encoder) PrecomputeMarshal(
 	body any,
 ) (map[string]any, error) {
-	// Reflect on the instance to get its fields
-	v := reflect.ValueOf(body)
+	// Check if body is nil
+	if body == nil {
+		return nil, gojsonencoder.ErrNilBody
+	}
+	
+	// Check if the cache is true, if so try to get the mapper from the cache
+	if e.cache && e.cachedMappers != nil {
+		// Get the unique type identifier for the body
+		uniqueTypeReference := goreflect.UniqueTypeReference(body)
+		
+		// Check if the mapper exists in the cache
+		if mapper, ok := e.cachedMappers[uniqueTypeReference]; ok {
+			precomputedMarshal, err := mapper.PrecomputeMarshalByReflection(body, &e.marshalOptions)
+			if err != nil {
+				return nil, err
+			}
+			return precomputedMarshal, nil
+		}
+	}
+	
+	// Create the cache map if it doesn't exist
+	if e.cache && e.cachedMappers == nil {
+		e.cachedMappers = make(map[string]*Mapper)
+	}
+	
+	// Create a new mapper and store it in the cache if caching is enabled
+	mapper, err := NewMapper(body)
+	if err != nil {
+		return nil, err
+	}
+	if e.cache {
+		// Get the unique type identifier for the body
+		uniqueTypeReference := goreflect.UniqueTypeReference(body)
+		
+		// Store the mapper in the cache
+		e.cachedMappers[uniqueTypeReference] = mapper
+	}
 
-	// Precompute the marshaled body
-	precomputedMarshal, err := PrecomputeMarshalByReflection(
-		v,
+	// Marshal the instance to get the precomputed body
+	precomputedMarshal, err := mapper.PrecomputeMarshalByReflection(
+		body,
 		&e.marshalOptions,
 	)
 	if err != nil {
@@ -80,7 +151,7 @@ func (e Encoder) Encode(
 	if body == nil {
 		return nil, gojsonencoder.ErrNilBody
 	}
-
+	
 	// Marshal the instance to get the precomputed body
 	precomputedMarshal, err := e.PrecomputeMarshal(body)
 	if err != nil {
