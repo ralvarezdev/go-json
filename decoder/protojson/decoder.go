@@ -5,17 +5,18 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	gojsondecoder "github.com/ralvarezdev/go-json/decoder"
 	goreflect "github.com/ralvarezdev/go-reflect"
+
+	gojsondecoder "github.com/ralvarezdev/go-json/decoder"
 )
 
 type (
 	Decoder struct {
 		unmarshalOptions protojson.UnmarshalOptions
-		cache bool
-		cachedMappers map[string]*Mapper
+		cache            bool
+		cachedMappers    map[string]*Mapper
 	}
-	
+
 	// Options are the additional settings for the decoder implementation
 	Options struct {
 		// cache indicates whether to cache the precompute unmarshal by reflection functions
@@ -24,13 +25,13 @@ type (
 )
 
 // NewOptions creates a new Options instance
-// 
+//
 // Parameters:
-// 
-//  - cache: indicates whether to cache the precompute unmarshal by reflection functions
-// 
+//
+//   - cache: indicates whether to cache the precompute unmarshal by reflection functions
+//
 // Returns:
-// 
+//
 // - *Options: the new Options instance
 func NewOptions(
 	cache bool,
@@ -41,10 +42,10 @@ func NewOptions(
 }
 
 // NewDecoder creates a new Decoder instance
-// 
+//
 // Parameters:
-// 
-//  - options: the additional settings for the decoder implementation
+//
+//   - options: the additional settings for the decoder implementation
 //
 // Returns:
 //
@@ -55,7 +56,7 @@ func NewDecoder(options *Options) *Decoder {
 	if options != nil {
 		cache = options.cache
 	}
-	
+
 	// Initialize unmarshal options
 	unmarshalOptions := protojson.UnmarshalOptions{
 		DiscardUnknown: true,
@@ -92,7 +93,7 @@ func (d Decoder) Decode(
 	if err != nil {
 		return err
 	}
-	
+
 	return d.DecodeReader(parsedReader, dest)
 }
 
@@ -119,18 +120,18 @@ func (d Decoder) DecodeReader(
 	if dest == nil {
 		return gojsondecoder.ErrNilDestination
 	}
-	
+
 	// Read all body from the reader
 	body, err := io.ReadAll(reader)
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if the cache is enabled and use cached mapper if available
-	if d.cache  && d.cachedMappers != nil {
+	if d.cache && d.cachedMappers != nil {
 		// Get the unique type identifier for the destination
 		uniqueTypeReference := goreflect.UniqueTypeReference(dest)
-		
+
 		// Check if there is a cached mapper for the destination type
 		if mapper, found := d.cachedMappers[uniqueTypeReference]; found {
 			return mapper.UnmarshalByReflection(
@@ -140,24 +141,24 @@ func (d Decoder) DecodeReader(
 			)
 		}
 	}
-	
+
 	// Initialize the cache map if caching is enabled
 	if d.cache && d.cachedMappers == nil {
 		d.cachedMappers = make(map[string]*Mapper)
 	}
-	
+
 	// Create a new mapper for the destination type
 	mapper, err := NewMapper(dest)
 	if err != nil {
 		return err
-	}	
+	}
 
 	// Store the mapper in the cache if caching is enabled
 	if d.cache {
 		uniqueTypeReference := goreflect.UniqueTypeReference(dest)
 		d.cachedMappers[uniqueTypeReference] = mapper
 	}
-	
+
 	// Unmarshal the body into the destination using the mapper
 	return mapper.UnmarshalByReflection(
 		body,
