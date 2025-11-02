@@ -170,12 +170,9 @@ func (m *Mapper) PrecomputeMarshalByReflection(
 		// Get the field value
 		fieldValueInterface := fieldValue.Interface()
 		
-		// Check if the field is optional and is nil
-		if _, optionalOk := m.optionalFields[fieldName]; optionalOk {
-			if fieldValue.IsNil() {
-				// Skip nil optional fields
-				continue
-			}
+		// Check if the field is optional and zero value
+		if _, optionalOk := m.optionalFields[fieldName]; optionalOk && fieldValue.IsZero() {
+			continue
 		}
 
 		// Check if the field is a regular field
